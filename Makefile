@@ -9,24 +9,27 @@ DOCKER_FILE=Dockerfile
 COMPOSE_FILE=docker-compose.yml
 
 init:
-	go mod download
-	go mod tidy
+	$(GO) mod download
+	$(GO) mod tidy
 
 run:
-	go run ./cmd/kaze/
+	$(GO) run ./cmd/kaze/
 
 test/unit:
-	go test -race ./...
+	$(GO) test -race ./...
 
 test/vet:
 	$(GO) vet ./...
+
+test/integration:
+	@$(GO) test -tags=integration ./...
 
 clean:
 	rm -rf build || true
 	mkdir build
 
 build: clean
-	go build -o build/kaze ./cmd/kaze
+	$(GO) build -o build/kaze ./cmd/kaze
 
 # Build the Docker image
 docker/build:
