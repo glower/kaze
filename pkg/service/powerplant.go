@@ -9,8 +9,9 @@ import (
 	"github.com/glower/kaze/pkg/repository"
 )
 
-// PowerPlantService defines the interface for power plant services.
-// ////go:generate go run github.com/vektra/mockery/v2@v2 --name=PowerPlantService --filename=power_plant_service.go --output=../../mocks/
+// PowerPlantService defines the interface for operations on power plants.
+//
+//go:generate go run github.com/vektra/mockery/v2@v2 --name=PowerPlantService --filename=power_plant_service.go --output=../../mocks/
 type PowerPlantService interface {
 	CreatePowerPlant(ctx context.Context, plant *model.PowerPlant) (*model.PowerPlant, error)
 	UpdatePowerPlant(ctx context.Context, plant *model.PowerPlant) (*model.PowerPlant, error)
@@ -18,7 +19,7 @@ type PowerPlantService interface {
 	ListPowerPlants(ctx context.Context, page, pageSize int, withElevation, withWeatherForecasts bool) (*model.PowerPlantList, error)
 }
 
-// PowerPlantService provides various services for power plants.
+// powerPlantService provides services related to power plants.
 type powerPlantService struct {
 	dbRepo        repository.PowerPlantRepository
 	openMeteoRepo repository.OpenMeteoRepository
@@ -32,34 +33,32 @@ func NewPowerPlantService(dbRepo repository.PowerPlantRepository, openMeteoRepo 
 	}
 }
 
-// CreatePowerPlant creates a new power plant.
+// CreatePowerPlant handles the creation of a new power plant.
 func (s *powerPlantService) CreatePowerPlant(ctx context.Context, plant *model.PowerPlant) (*model.PowerPlant, error) {
-	// Call repository to save the power plant
+	slog.Debug("Creating a new power plant", "name", plant.Name)
 	return s.dbRepo.Create(ctx, plant)
 }
 
-// UpdatePowerPlant updates an existing power plant.
+// UpdatePowerPlant handles updating an existing power plant.
 func (s *powerPlantService) UpdatePowerPlant(ctx context.Context, plant *model.PowerPlant) (*model.PowerPlant, error) {
-	// Call repository to update the power plant
+	slog.Debug("Updating power plant", "id", plant.ID)
 	_, err := s.dbRepo.Update(ctx, plant)
 	if err != nil {
-		return nil, fmt.Errorf("could not update the power plant data: %w", err)
+		return nil, fmt.Errorf("could not update power plant: %w", err)
 	}
-
-	// get the updated power plant
+	// Retrieve and return the updated plant
 	return s.dbRepo.GetByID(ctx, plant.ID)
 }
 
-// GetPowerPlant retrieves a power plant by its ID.
+// GetPowerPlant retrieves a specific power plant by its ID.
 func (s *powerPlantService) GetPowerPlant(ctx context.Context, id string, withElevation, withWeatherForecasts bool) (*model.PowerPlant, error) {
-	slog.Debug("get power plant", "withElevation", withElevation, "withWeatherForecasts", withWeatherForecasts)
-
-	// Call repository to fetch the power plant
+	slog.Debug("Retrieving power plant", "id", id, "withElevation", withElevation, "withWeatherForecasts", withWeatherForecasts)
 	plant, err := s.dbRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	// Fetch additional data based on request
 	if withElevation {
 		if err := s.fetchElevation(ctx, plant); err != nil {
 			return nil, err
@@ -75,30 +74,27 @@ func (s *powerPlantService) GetPowerPlant(ctx context.Context, id string, withEl
 	return plant, nil
 }
 
+// ListPowerPlants retrieves a list of power plants with optional elevation and weather forecast data.
 func (s *powerPlantService) ListPowerPlants(ctx context.Context, page, pageSize int, withElevation, withWeatherForecasts bool) (*model.PowerPlantList, error) {
 	offset := (page - 1) * pageSize
-
+	slog.Debug("Listing power plants", "page", page, "pageSize", pageSize)
 	plants, total, err := s.dbRepo.List(ctx, offset, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
 	var plantPointers []*model.PowerPlant
-	for i := range plants {
-		plant := plants[i]
-
+	for _, plant := range plants {
 		if withElevation {
 			if err := s.fetchElevation(ctx, &plant); err != nil {
 				return nil, err
 			}
 		}
-
 		if withWeatherForecasts {
 			if err := s.fetchWeatherForecasts(ctx, &plant); err != nil {
 				return nil, err
 			}
 		}
-
 		plantPointers = append(plantPointers, &plant)
 	}
 
@@ -116,6 +112,8 @@ func (s *powerPlantService) fetchElevation(ctx context.Context, plant *model.Pow
 	plant.Elevation = elevation
 	return nil
 }
+
+// Helper functions for fetching additional data (elevation and weather forecasts) are defined below...
 
 func (s *powerPlantService) fetchWeatherForecasts(ctx context.Context, plant *model.PowerPlant) error {
 	forecast, err := s.openMeteoRepo.GetWeatherForecast(ctx, plant.Latitude, plant.Longitude)

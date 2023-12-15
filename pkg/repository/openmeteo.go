@@ -5,23 +5,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 )
 
+// WeatherForecastResponse represents the response structure for weather forecasts.
 type WeatherForecastResponse struct {
-	Hourly struct {
-		Time             []string  `json:"time"`
-		Precipitation    []float64 `json:"precipitation"`
-		WindSpeed10m     []float64 `json:"wind_speed_10m"`
-		Temperature2m    []float64 `json:"temperature_2m"`
-		WindDirection10m []float64 `json:"wind_direction_10m"`
-	} `json:"hourly"`
+	Hourly Hourly `json:"hourly"`
 }
 
+type Hourly struct {
+	Time             []string  `json:"time"`
+	Precipitation    []float64 `json:"precipitation"`
+	WindSpeed10m     []float64 `json:"wind_speed_10m"`
+	Temperature2m    []float64 `json:"temperature_2m"`
+	WindDirection10m []float64 `json:"wind_direction_10m"`
+}
+
+// ElevationResponse represents the response structure for elevation data.
 type ElevationResponse struct {
 	Elevation []float64 `json:"elevation"`
 }
 
+// OpenMeteoRepository defines the interface for interacting with the Open-Meteo API.
+//
+//go:generate go run github.com/vektra/mockery/v2@v2 --name=OpenMeteoRepository --filename=open_meteo_repository.go --output=../../mocks/
 type OpenMeteoRepository interface {
 	GetElevation(ctx context.Context, latitude, longitude float64) (float64, error)
 	GetWeatherForecast(ctx context.Context, latitude, longitude float64) (*WeatherForecastResponse, error)
@@ -37,8 +45,10 @@ func NewOpenMeteoRepository(apiKey string) OpenMeteoRepository {
 	}
 }
 
+// GetElevation retrieves elevation data from the Open-Meteo API.
 func (r *openMeteoRepo) GetElevation(ctx context.Context, latitude, longitude float64) (float64, error) {
 	url := fmt.Sprintf("https://api.open-meteo.com/v1/elevation?latitude=%f&longitude=%f&apikey=%s", latitude, longitude, r.apiKey)
+	slog.Debug("Fetching elevation data", "url", url)
 
 	// Create a new request with context
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -74,8 +84,10 @@ func (r *openMeteoRepo) GetElevation(ctx context.Context, latitude, longitude fl
 	return elevationResponse.Elevation[0], nil
 }
 
+// GetWeatherForecast retrieves weather forecast data from the Open-Meteo API.
 func (r *openMeteoRepo) GetWeatherForecast(ctx context.Context, latitude, longitude float64) (*WeatherForecastResponse, error) {
 	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&hourly=temperature_2m,precipitation,wind_speed_10m,wind_direction_10m", latitude, longitude)
+	slog.Debug("Fetching weather forecast data", "url", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
