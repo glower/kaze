@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    image: kaze-image
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_DB: "postgres://root:kaze@db:5432/kaze?sslmode=disable"
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: kaze
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: kaze
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U root -d kaze" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

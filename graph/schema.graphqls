@@ -1,0 +1,64 @@
+type PowerPlant {
+  "ID of the power plant"
+  id: ID!
+  "Name of the power plant"
+  name: String!
+  "Latitude in degrees"
+  latitude: Float!
+  "Longitude in degrees"
+  longitude: Float!
+  "Provided forecasts from openmeteo for the weather"
+  weatherForecasts(forecastDays: Int = 7): [WeatherForecast!]!
+  "Is there precipitation at the power plant today?"
+  hasPrecipitationToday: Boolean!
+  "Elevation of the power plant"
+  elevation: Float!
+}
+
+type PowerPlantList {
+  "List of power plants"
+  powerPlants: [PowerPlant!]!
+  "Total number of power plants available"
+  totalCount: Int!
+}
+
+type WeatherForecast {
+  "Time of the forecast in UTC/GMT"
+  time: String!
+  "Temperature (2 m) in celsius"
+  temperature: Float!
+  "Precipitation (rain + showers + snow) in millimeter"
+  precipitation: Float!
+  "Wind Speed (10 m) in Km/h"
+  windSpeed: Float!
+  "Wind Direction (10 m) in degrees"
+  windDirection: Float!
+}
+
+type Query {
+  "Fetch a single power plant by its ID"
+  powerPlant(id: ID!): PowerPlant
+
+  "List all power plants with optional pagination"
+  listPowerPlants(page: Int, pageSize: Int): PowerPlantList
+}
+
+type Mutation {
+  "Create a new power plant"
+  createPowerPlant(input: NewPowerPlantInput!): PowerPlant
+
+  "Update an existing power plant"
+  updatePowerPlant(id: ID!, input: UpdatePowerPlantInput!): PowerPlant
+}
+
+input NewPowerPlantInput {
+  name: String!
+  latitude: Float!
+  longitude: Float!
+}
+
+input UpdatePowerPlantInput {
+  name: String
+  latitude: Float
+  longitude: Float
+}
